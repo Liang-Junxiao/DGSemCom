@@ -271,6 +271,7 @@ class VQDiffusionScheduler(torch.nn.Module):
         sample: torch.LongTensor,
         generator: Optional[torch.Generator] = None,
         return_dict: bool = True,
+        delta_t = 1
     ) :
         """
         Predict the sample at the previous timestep via the reverse transition distribution i.e. Equation (11). See the
@@ -305,7 +306,7 @@ class VQDiffusionScheduler(torch.nn.Module):
         if timestep == 0:
             log_p_x_t_min_1 = log_p_x_0_predict
         else:
-            log_p_x_t_min_1 = self.q_posterior_star(log_p_x_0_predict, sample, timestep)
+            log_p_x_t_min_1 = self.q_posterior_star(log_p_x_0_predict, sample, timestep, delta_t = delta_t)
             # log_p_x_t_min_1 = self.q_posterior(log_p_x_0_predict, sample, timestep)
         log_p_x_t_min_1 = gumbel_noised(log_p_x_t_min_1, generator)
 
@@ -444,7 +445,7 @@ class VQDiffusionScheduler(torch.nn.Module):
         # The last row is trivially verified. The other rows can be verified by directly expanding equation (11) stated in terms of forward probabilities.
         return log_p_x_t_min_1.clamp(min=-70, max=0)
 
-    def q_posterior_star(self, log_p_x_0, x_t, t):
+    def q_posterior_star(self, log_p_x_0, x_t, t, delta_t = 1):
         """
         Calculates the log probabilities for the predicted classes of the image at timestep `t-1`. I.e. Equation (11).
 
@@ -505,7 +506,7 @@ class VQDiffusionScheduler(torch.nn.Module):
         #                                         .                                                                  .                            .
         # (p_0(x_0=C_{k-1} | x_t) / q(x_t | x_0=C_{k-1}) / sum_0) * a_cumulative_{t-1} + b_cumulative_{t-1}  ...      (p_n(x_0=C_{k-1} | x_t) / q(x_t | x_0=C_{k-1}) / sum_n) * a_cumulative_{t-1} + b_cumulative_{t-1}
         # c_cumulative_{t-1}                                                                                 ...      c_cumulative_{t-1}
-        q = self.apply_cumulative_transitions(q, t - 1)
+        q = self.apply_cumulative_transitions(q, t - delta_t)
 
         # ((p_0(x_0=C_0 | x_t) / q(x_t | x_0=C_0) / sum_0) * a_cumulative_{t-1} + b_cumulative_{t-1}) * q(x_t | x_{t-1}=C_0) * sum_0              ...      ((p_n(x_0=C_0 | x_t) / q(x_t | x_0=C_0) / sum_n) * a_cumulative_{t-1} + b_cumulative_{t-1}) * q(x_t | x_{t-1}=C_0) * sum_n
         #                                                            .                                                                 .                                              .
