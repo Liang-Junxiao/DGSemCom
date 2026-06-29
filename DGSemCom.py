@@ -299,7 +299,7 @@ class DGSemCom(nn.Module):
                 # remove `log(0)`'s (`-inf`s)
                 model_output = model_output.clamp(-70)
                 # compute the previous noisy sample x_t -> x_t-1
-                sample = self.schedule.step_star(model_output, timestep=t, sample=sample, generator= None)
+                sample = self.schedule.step_star(model_output, timestep=t, sample=sample, generator= None, delta_t = delta_t)
 
 
             if t==0:
